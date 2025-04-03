@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "PickPhotoPro"
 include(":app")
- 
+include(":pickphoto")

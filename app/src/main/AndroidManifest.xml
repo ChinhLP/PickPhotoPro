@@ -13,9 +13,10 @@
         android:theme="@style/Theme.PickPhotoPro"
         tools:targetApi="31">
         <activity
-            android:name=".MainActivity"
+            android:name=".sample.SampleActivity"
             android:exported="true"
             android:label="@string/app_name"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.PickPhotoPro">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -23,6 +24,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".preview.PreviewActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
     </application>
 
 </manifest>
