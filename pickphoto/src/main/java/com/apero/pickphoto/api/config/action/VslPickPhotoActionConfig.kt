@@ -9,5 +9,7 @@ interface VslPickPhotoActionConfig {
         weakActivity: WeakReference<Activity>
     )
 
-    fun actionBack()
+    fun actionBack(
+        weakActivity: WeakReference<Activity>
+    )
 }
