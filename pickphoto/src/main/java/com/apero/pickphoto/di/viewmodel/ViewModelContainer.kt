@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStoreOwner
+import com.apero.pickphoto.di.DIContainer
 import com.apero.pickphoto.internal.ui.screen.camera.intent.CameraViewModel
 import com.apero.pickphoto.internal.ui.screen.pickphoto.intent.PickPhotoViewModel
 
@@ -21,7 +22,10 @@ internal class ViewModelFactory : AbstractSavedStateViewModelFactory() {
             }
 
             modelClass.isAssignableFrom(PickPhotoViewModel::class.java) -> {
-                PickPhotoViewModel() as T
+                PickPhotoViewModel(
+                    DIContainer.repositoryContainer.galleryRepository,
+                    handle
+                ) as T
             }
 
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

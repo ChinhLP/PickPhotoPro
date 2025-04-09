@@ -49,15 +49,17 @@ class PreviewActivity : ComponentActivity() {
 fun PreviewScreen(url: String?, backClick: () -> Unit) {
     Scaffold(
         topBar = {
-            Image(imageVector = Icons.Filled.ArrowBack, contentDescription = null)
+            Image(
+                imageVector = Icons.Filled.ArrowBack,
+                contentDescription = null,
+                modifier = Modifier.clickable {
+                    backClick.invoke()
+                })
         },
         content = { paddingValues ->
             AvatarImage(
                 url, modifier = Modifier
-                    .padding(paddingValues)
-                    .clickable {
-                        backClick.invoke()
-                    })
+                    .padding(paddingValues))
         }
     )
 }
@@ -88,13 +90,14 @@ fun AvatarImage(url: String?, modifier: Modifier) {
         contentScale = ContentScale.Crop,
         modifier = Modifier.fillMaxSize(),
         placeholder = painterResource(id = R.drawable.img_place_holder),
-        error = painterResource(id = R.drawable.imgError)
+        error = painterResource(id = R.drawable.img_error)
     )
 }
 
 @Preview
 @Composable
 fun Preview() {
-    PreviewScreen("https://static.wikia.nocookie.net/reverend-insanity/images/b/b4/Yuan11.jpg/revision/latest?cb=20250111162706",
+    PreviewScreen(
+        "https://static.wikia.nocookie.net/reverend-insanity/images/b/b4/Yuan11.jpg/revision/latest?cb=20250111162706",
         {})
 }
