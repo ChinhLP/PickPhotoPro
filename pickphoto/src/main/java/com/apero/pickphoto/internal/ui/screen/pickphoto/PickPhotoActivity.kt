@@ -23,7 +23,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -132,6 +134,20 @@ internal fun PickPhotoScreen(
         content = { paddingValues ->
             val scrollState = rememberScrollState()
             val gridState = rememberLazyGridState()
+            val itemSize = remember { 100.pxToDp() }
+
+            LaunchedEffect(gridState) {
+                snapshotFlow { gridState.layoutInfo }
+                    .collect { layoutInfo ->
+                        val totalItems = layoutInfo.totalItemsCount
+                        val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+
+                        // Kiểm tra nếu đã cuộn đến gần cuối (ví dụ: cách cuối 5 item)
+                        if (lastVisibleItem >= totalItems - 6) {
+                            onLoadMorePickPhotos.invoke() // gọi load thêm dữ liệu
+                        }
+                    }
+            }
             LazyVerticalGrid(
                 state = gridState,
                 contentPadding = PaddingValues(20.pxToDp()),
@@ -145,8 +161,8 @@ internal fun PickPhotoScreen(
                 items(items = uiState.photos, key = { it.id.toString() }) {
                     PickPhotoItem(
                         it.uri,
-                        modifier = Modifier.size(100.pxToDp()),
-                        isSelected = uiState.itemSelected == it
+                        modifier = Modifier.size(itemSize),
+                        isSelected = uiState.itemSelected.id == it.id
                     ) {
                         onPhotoSelected.invoke(it)
                     }

@@ -29,7 +29,6 @@ internal class PickPhotoViewModel(
         when (intent) {
             is PickPhotoIntent.LoadInitPhotos -> viewModelScope.launch {
                 loadInitPhotos(intent.context)
-                getItemPickPhotoTheLast()
             }
 
             is PickPhotoIntent.LoadMorePhotos -> viewModelScope.launch {
@@ -37,7 +36,6 @@ internal class PickPhotoViewModel(
                     intent.context,
                     intent.lastPhotoDateAdded
                 )
-                getItemPickPhotoTheLast()
             }
 
             is PickPhotoIntent.SelectPhoto -> selectPhoto(intent.itemSelected)
@@ -80,12 +78,14 @@ internal class PickPhotoViewModel(
         viewModelScope.launch {
             val photos = galleryRepository.getPhotos(context, 50)
             updateUiState { copy(photos = photos.toMutableList()) }
+            getItemPickPhotoTheLast()
         }
 
     private fun loadMorePhotos(context: Context, lastPhotoDateAdded: Long?) =
         viewModelScope.launch {
             val photos = galleryRepository.getPhotos(context, 50, lastPhotoDateAdded)
             updateUiState { copy(photos = this.photos.apply { addAll(photos) }) }
+            getItemPickPhotoTheLast()
         }
 
     private fun selectPhoto(itemSelected: PhotoModel) {
