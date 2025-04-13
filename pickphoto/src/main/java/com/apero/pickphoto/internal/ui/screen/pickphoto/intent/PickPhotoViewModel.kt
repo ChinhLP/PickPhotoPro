@@ -41,7 +41,6 @@ internal class PickPhotoViewModel(
             is PickPhotoIntent.SelectPhoto -> selectPhoto(intent.itemSelected)
             is PickPhotoIntent.LoadFolders -> viewModelScope.launch {
                 loadFolders(intent.context)
-                getItemInFolderTheLast()
             }
 
             is PickPhotoIntent.LoadMoreImageInFolder -> viewModelScope.launch {
@@ -50,7 +49,6 @@ internal class PickPhotoViewModel(
                     intent.folderId,
                     intent.lastPhotoDateAdded
                 )
-                getItemInFolderTheLast()
             }
 
             PickPhotoIntent.ChangeShowListFolder -> {
@@ -59,8 +57,19 @@ internal class PickPhotoViewModel(
         }
     }
 
-    fun getItemInFolderTheLast() = viewModelScope.launch {
-
+    private fun getItemInFolderTheLast() = viewModelScope.launch {
+        updateUiState {
+            if (folders.isNotEmpty()) {
+                val lastFolder = folders.last()
+                if (lastFolder.photos.isNotEmpty()) {
+                    copy(lastItemInFolder = lastFolder.photos.last())
+                } else {
+                    this
+                }
+            } else {
+                this
+            }
+        }
     }
 
     private fun getItemPickPhotoTheLast() =
@@ -117,5 +126,6 @@ internal class PickPhotoViewModel(
                     }
                 )
             }
+            getItemInFolderTheLast()
         }
 }
