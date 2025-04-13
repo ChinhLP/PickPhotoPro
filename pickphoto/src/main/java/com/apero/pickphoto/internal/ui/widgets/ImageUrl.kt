@@ -22,28 +22,17 @@ import com.valentinilk.shimmer.shimmer
 
 @Composable
 fun PickPhotoImage(image: Any?, modifier: Modifier = Modifier) {
-    val shimmerInstance = rememberShimmer(shimmerBounds = ShimmerBounds.View)
-    val painter = rememberAsyncImagePainter(model = image)
-    val state = painter.state.collectAsStateWithLifecycle()
-
+    val placeholder = painterResource(R.drawable.img_place_holder)
+    val error = painterResource(R.drawable.img_error)
     Box(modifier = modifier) {
-        if (state.value is AsyncImagePainter.State.Loading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .shimmer(shimmerInstance)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-            )
-        }
 
-        // Ảnh chính
         AsyncImage(
             model = image,
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(), // luôn fit trong Box bên ngoài
-            placeholder = painterResource(id = R.drawable.img_place_holder),
-            error = painterResource(id = R.drawable.img_error)
+            modifier = Modifier.fillMaxSize(),
+            placeholder = placeholder,
+            error = error
         )
     }
 }

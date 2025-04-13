@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -33,18 +34,27 @@ internal fun PickPhotoItem(
     modifier: Modifier = Modifier,
     onSelect: () -> Unit
 ) {
+    val shape = remember { RoundedCornerShape(16.dp) }
     var parentSize by remember { mutableStateOf(Offset(0f, 0f)) }
-    Box(modifier = modifier
-        .fillMaxSize()
-        .clickable {
-            onSelect.invoke()
-        }
-        .onSizeChanged { size ->
-            parentSize = Offset(size.width.toFloat(), size.height.toFloat())
-        }) {
-        PickPhotoImage(uri, modifier = Modifier
+    val iconSize = remember(parentSize) {
+        (parentSize.x * 0.0576f).pxToDp()
+    }
+    Box(
+        modifier = modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(16.dp)))
+            .clickable {
+                onSelect.invoke()
+            }
+            .onSizeChanged { size ->
+                parentSize = Offset(size.width.toFloat(), size.height.toFloat())
+            }) {
+        key(uri) {
+            PickPhotoImage(
+                uri, modifier = Modifier
+                    .fillMaxSize()
+                    .clip(shape)
+            )
+        }
         Image(
             painter = painterResource(if (isSelected) R.drawable.vsl_ic_selected else R.drawable.vsl_ic_unselect),
             contentDescription = null,
@@ -55,7 +65,7 @@ internal fun PickPhotoItem(
                         (parentSize.y * 0.08f).roundToInt()
                     )
                 }
-                .size((parentSize.x * 0.0576f).pxToDp())
+                .size(iconSize)
 
         )
     }
@@ -64,5 +74,5 @@ internal fun PickPhotoItem(
 @Preview
 @Composable
 fun PreviewPickPhotoItem() {
-    PickPhotoItem(uri = null,true) {}
+    PickPhotoItem(uri = null, true) {}
 }
