@@ -32,7 +32,7 @@ internal class GalleryRepositoryImpl : GalleryRepository {
             arrayOf(it.toString())
         }
 
-        val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC LIMIT $limit"
+        val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
 
         val query = context.contentResolver.query(
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
@@ -49,7 +49,8 @@ internal class GalleryRepositoryImpl : GalleryRepository {
                 cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
             val dateColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED)
 
-            while (cursor.moveToNext()) {
+            var count = 0
+            while (cursor.moveToNext() && count < limit) {
                 val id = cursor.getLong(idColumn)
                 val name = cursor.getString(nameColumn)
                 val folder = cursor.getString(folderColumn)
@@ -62,12 +63,14 @@ internal class GalleryRepositoryImpl : GalleryRepository {
 
                 photos.add(
                     PhotoModel(
+                        id = id.toString() + "_compressed",
                         uri = contentUri,
                         name = name,
                         folder = folder,
                         dateAdded = date
                     )
                 )
+                count++
             }
         }
 
@@ -190,6 +193,7 @@ internal class GalleryRepositoryImpl : GalleryRepository {
 
                 photos.add(
                     PhotoModel(
+                        id = id.toString() + "_compressed",
                         uri = contentUri,
                         name = name,
                         dateAdded = date

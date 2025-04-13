@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="vsl_pick_photo_title">Camera</string>
+    <string name="vsl_pick_photo_next">Next</string>
+</resources>

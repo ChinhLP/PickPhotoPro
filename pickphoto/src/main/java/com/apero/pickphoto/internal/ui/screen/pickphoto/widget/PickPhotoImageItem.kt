@@ -1,5 +1,6 @@
 package com.apero.pickphoto.internal.ui.screen.pickphoto.widget
 
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -27,6 +28,7 @@ import kotlin.math.roundToInt
 
 @Composable
 internal fun PickPhotoItem(
+    uri: Uri?,
     isSelected: Boolean = false,
     modifier: Modifier = Modifier,
     sonSelect: () -> Unit
@@ -40,7 +42,7 @@ internal fun PickPhotoItem(
         .onSizeChanged { size ->
             parentSize = Offset(size.width.toFloat(), size.height.toFloat())
         }) {
-        PickPhotoImage(null, modifier = Modifier
+        PickPhotoImage(uri, modifier = Modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(16.dp)))
         Image(
@@ -62,5 +64,5 @@ internal fun PickPhotoItem(
 @Preview
 @Composable
 fun PreviewPickPhotoItem() {
-    PickPhotoItem(true) {}
+    PickPhotoItem(uri = null,true) {}
 }

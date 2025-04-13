@@ -21,38 +21,38 @@ import com.valentinilk.shimmer.rememberShimmer
 import com.valentinilk.shimmer.shimmer
 
 @Composable
-fun PickPhotoImage(url: String?, modifier: Modifier) {
+fun PickPhotoImage(image: Any?, modifier: Modifier = Modifier) {
     val shimmerInstance = rememberShimmer(shimmerBounds = ShimmerBounds.View)
-    val painter = rememberAsyncImagePainter(model = url)
+    val painter = rememberAsyncImagePainter(model = image)
     val state = painter.state.collectAsStateWithLifecycle()
 
-    Box(
-        modifier = modifier
-    ) {
-        if (state.value is AsyncImagePainter.State.Loading)
+    Box(modifier = modifier) {
+        if (state.value is AsyncImagePainter.State.Loading) {
             Box(
                 modifier = Modifier
-                    .matchParentSize()
-                    .shimmer(shimmerInstance) // Hiệu ứng shimmer loading
+                    .fillMaxSize()
+                    .shimmer(shimmerInstance)
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             )
-    }
+        }
 
-    AsyncImage(
-        model = url,
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = modifier,
-        placeholder = painterResource(id = R.drawable.img_place_holder),
-        error = painterResource(id = R.drawable.img_error)
-    )
+        // Ảnh chính
+        AsyncImage(
+            model = image,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(), // luôn fit trong Box bên ngoài
+            placeholder = painterResource(id = R.drawable.img_place_holder),
+            error = painterResource(id = R.drawable.img_error)
+        )
+    }
 }
 
 @Preview
 @Composable
 fun PreviewPickPhotoImage() {
     PickPhotoImage(
-        url = "https://example.com/image.jpg",
+        image = "https://example.com/image.jpg",
         modifier = Modifier
             .size(100.dp)
     )

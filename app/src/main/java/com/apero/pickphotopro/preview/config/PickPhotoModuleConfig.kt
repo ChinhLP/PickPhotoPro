@@ -4,9 +4,9 @@ import com.apero.pickphoto.api.config.module.VslPickPhotoModuleConfig
 
 class PickPhotoModuleConfig() : VslPickPhotoModuleConfig {
     override val projectName: String
-        get() = TODO("Not yet implemented")
+        get() = "ddd"
     override val appName: String
-        get() = TODO("Not yet implemented")
+        get() = "pickPhoto"
     override val language: String
-        get() = TODO("Not yet implemented")
+        get() = "en"
 }

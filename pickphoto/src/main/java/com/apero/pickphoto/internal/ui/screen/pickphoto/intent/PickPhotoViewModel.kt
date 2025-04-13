@@ -54,16 +54,26 @@ internal class PickPhotoViewModel(
                 )
                 getItemInFolderTheLast()
             }
+
+            PickPhotoIntent.ChangeShowListFolder -> {
+                updateUiState { copy(isShowListFolder = !isShowListFolder) }
+            }
         }
     }
 
     fun getItemInFolderTheLast() = viewModelScope.launch {
-        TODO()
+
     }
 
     private fun getItemPickPhotoTheLast() =
         viewModelScope.launch {
-            updateUiState { copy(lastItemPickPhoto = this.photos.last()) }
+            updateUiState {
+                if (photos.isNotEmpty()) {
+                    copy(lastItemPickPhoto = photos.last())
+                } else {
+                    this
+                }
+            }
         }
 
     private fun loadInitPhotos(context: Context) =
