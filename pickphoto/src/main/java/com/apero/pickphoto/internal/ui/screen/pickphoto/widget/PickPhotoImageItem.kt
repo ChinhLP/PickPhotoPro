@@ -31,13 +31,13 @@ internal fun PickPhotoItem(
     uri: Uri?,
     isSelected: Boolean = false,
     modifier: Modifier = Modifier,
-    sonSelect: () -> Unit
+    onSelect: () -> Unit
 ) {
     var parentSize by remember { mutableStateOf(Offset(0f, 0f)) }
     Box(modifier = modifier
         .fillMaxSize()
         .clickable {
-            sonSelect.invoke()
+            onSelect.invoke()
         }
         .onSizeChanged { size ->
             parentSize = Offset(size.width.toFloat(), size.height.toFloat())

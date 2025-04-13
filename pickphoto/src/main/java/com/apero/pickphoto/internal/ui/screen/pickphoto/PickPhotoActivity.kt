@@ -16,12 +16,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.apero.pickphoto.R
 import com.apero.pickphoto.di.DIContainer
 import com.apero.pickphoto.internal.base.BaseComposeActivity
+import com.apero.pickphoto.internal.data.model.PhotoModel
 import com.apero.pickphoto.internal.designsystem.LocalCustomTypography
 import com.apero.pickphoto.internal.designsystem.component.VslTextView
 import com.apero.pickphoto.internal.designsystem.pxToDp
@@ -81,7 +84,7 @@ internal class PickPhotoActivity : BaseComposeActivity() {
                 )
             },
             onPhotoSelected = {
-                viewModel.onEvent(PickPhotoIntent.SelectPhoto(uiState.itemSelected))
+                viewModel.onEvent(PickPhotoIntent.SelectPhoto(it))
             },
             onClickShowListFolder = {
                 viewModel.onEvent(PickPhotoIntent.ChangeShowListFolder)
@@ -96,7 +99,7 @@ internal fun PickPhotoScreen(
     uiState: PickPhotoState,
     onLoadMorePickPhotos: () -> Unit,
     onLoadMorePhotoInFolder: () -> Unit,
-    onPhotoSelected: (String) -> Unit,
+    onPhotoSelected: (PhotoModel) -> Unit,
     onClickShowListFolder: () -> Unit,
 ) {
     Scaffold(
@@ -128,7 +131,9 @@ internal fun PickPhotoScreen(
         },
         content = { paddingValues ->
             val scrollState = rememberScrollState()
+            val gridState = rememberLazyGridState()
             LazyVerticalGrid(
+                state = gridState,
                 contentPadding = PaddingValues(20.pxToDp()),
                 horizontalArrangement = Arrangement.spacedBy(10.pxToDp()),
                 verticalArrangement = Arrangement.spacedBy(12.pxToDp()),
@@ -138,7 +143,13 @@ internal fun PickPhotoScreen(
                     .padding(paddingValues)
             ) {
                 items(items = uiState.photos, key = { it.id.toString() }) {
-                    PickPhotoItem(it.uri,modifier = Modifier.size(100.pxToDp())) {}
+                    PickPhotoItem(
+                        it.uri,
+                        modifier = Modifier.size(100.pxToDp()),
+                        isSelected = uiState.itemSelected == it
+                    ) {
+                        onPhotoSelected.invoke(it)
+                    }
                 }
             }
             if (uiState.isShowListFolder) {
