@@ -1,5 +1,6 @@
 package com.apero.pickphoto.internal.ui.screen.pickphoto
 
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -135,6 +138,7 @@ internal fun PickPhotoScreen(
             val scrollState = rememberScrollState()
             val gridState = rememberLazyGridState()
             val itemSize = remember { 100.pxToDp() }
+            val listFolderPadding = remember { 8.pxToDp() }
 
             LaunchedEffect(gridState) {
                 snapshotFlow { gridState.layoutInfo }
@@ -142,9 +146,8 @@ internal fun PickPhotoScreen(
                         val totalItems = layoutInfo.totalItemsCount
                         val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
 
-                        // Kiểm tra nếu đã cuộn đến gần cuối (ví dụ: cách cuối 5 item)
                         if (lastVisibleItem >= totalItems - 6) {
-                            onLoadMorePickPhotos.invoke() // gọi load thêm dữ liệu
+                            onLoadMorePickPhotos.invoke()
                         }
                     }
             }
@@ -158,7 +161,7 @@ internal fun PickPhotoScreen(
                     .background(color = Color.White)
                     .padding(paddingValues)
             ) {
-                items(items = uiState.photos, key = { it.id.toString() }) {
+                itemsIndexed(items = uiState.photos, key = { index, item -> item.id.toString() + index }) { index, it ->
                     PickPhotoItem(
                         it.uri,
                         modifier = Modifier.size(itemSize),
@@ -175,10 +178,12 @@ internal fun PickPhotoScreen(
                         .background(color = Color.White)
                         .verticalScroll(scrollState)
                         .padding(paddingValues)
-                        .padding(start = 8.pxToDp())
+                        .padding(start = listFolderPadding)
                 ) {
-                    FolderPickPhoto("", "All Photos") {}
-                    FolderPickPhoto("", "Face Book") {}
+                    uiState.folders.forEach { folder ->
+                        FolderPickPhoto(folder.thumbnailUri,folder.folderName) {}
+                    }
+                    Spacer(modifier = Modifier.height(16.pxToDp()))
                 }
             }
         }
@@ -205,11 +210,14 @@ fun TitlePickPhoto(modifier: Modifier = Modifier, onClick: () -> Unit) {
 
 @Composable
 fun FolderPickPhoto(
-    url: String,
+    url: Uri?,
     nameFolder: String,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
+    val sizeImageFolder = remember { 50.pxToDp() }
+    val paddingRow = remember { 8.pxToDp()}
+    val pickPhotoImagePadding = remember { 6.pxToDp() }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
@@ -217,14 +225,14 @@ fun FolderPickPhoto(
             .clickable {
                 onClick.invoke()
             }
-            .padding(vertical = 8.pxToDp())
+            .padding(vertical = paddingRow)
     ) {
         PickPhotoImage(
             image = url,
             modifier = Modifier
-                .width(50.pxToDp())
-                .height(50.pxToDp())
-                .padding(end = 6.pxToDp())
+                .width(sizeImageFolder)
+                .height(sizeImageFolder)
+                .padding(end = pickPhotoImagePadding)
         )
         VslTextView(
             text = nameFolder,
