@@ -1,10 +1,12 @@
 package com.apero.pickphoto.internal.ui.screen.pickphoto
 
 import android.net.Uri
+import android.os.Bundle
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,18 +19,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -61,33 +61,17 @@ internal class PickPhotoActivity : BaseComposeActivity() {
         DIContainer.vslPickPhotoActionConfig.actionBack(WeakReference(this))
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        viewModel.onEvent(PickPhotoIntent.LoadInitPhotos(this@PickPhotoActivity))
+        viewModel.onEvent(PickPhotoIntent.LoadFolders(this@PickPhotoActivity))
+    }
+
     @Composable
     override fun SetupUi() {
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-        LaunchedEffect(Unit) {
-            viewModel.onEvent(PickPhotoIntent.LoadInitPhotos(this@PickPhotoActivity))
-            viewModel.onEvent(PickPhotoIntent.LoadFolders(this@PickPhotoActivity))
-        }
         PickPhotoScreen(
             uiState = uiState,
-            onLoadMorePickPhotos = {
-                viewModel.onEvent(
-                    PickPhotoIntent.LoadMorePhotos(
-                        this@PickPhotoActivity,
-                        uiState.lastItemPickPhoto.dateAdded
-                    )
-                )
-            },
-            onLoadMorePhotoInFolder = {
-                viewModel.onEvent(
-                    PickPhotoIntent.LoadMoreImageInFolder(
-                        this@PickPhotoActivity,
-                        uiState.folderSelected.folderId,
-                        50,
-                        uiState.lastItemInFolder.dateAdded
-                    )
-                )
-            },
             onPhotoSelected = {
                 viewModel.onEvent(PickPhotoIntent.SelectPhoto(it))
             },
@@ -102,8 +86,6 @@ internal class PickPhotoActivity : BaseComposeActivity() {
 @Composable
 internal fun PickPhotoScreen(
     uiState: PickPhotoState,
-    onLoadMorePickPhotos: () -> Unit,
-    onLoadMorePhotoInFolder: () -> Unit,
     onPhotoSelected: (PhotoModel) -> Unit,
     onClickShowListFolder: () -> Unit,
 ) {
@@ -139,38 +121,35 @@ internal fun PickPhotoScreen(
             val gridState = rememberLazyGridState()
             val itemSize = remember { 100.pxToDp() }
             val listFolderPadding = remember { 8.pxToDp() }
-
-            LaunchedEffect(gridState) {
-                snapshotFlow { gridState.layoutInfo }
-                    .collect { layoutInfo ->
-                        val totalItems = layoutInfo.totalItemsCount
-                        val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-
-                        if (lastVisibleItem >= totalItems - 6) {
-                            onLoadMorePickPhotos.invoke()
+            if (uiState.photos.isEmpty()) {
+                Box {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                }
+            } else {
+                LazyVerticalGrid(
+                    state = gridState,
+                    contentPadding = PaddingValues(20.pxToDp()),
+                    horizontalArrangement = Arrangement.spacedBy(10.pxToDp()),
+                    verticalArrangement = Arrangement.spacedBy(12.pxToDp()),
+                    columns = GridCells.Fixed(3),
+                    modifier = Modifier
+                        .background(color = Color.White)
+                        .padding(paddingValues)
+                ) {
+                    itemsIndexed(
+                        items = uiState.photos,
+                        key = { index, item -> item.path.toString() + index }) { index, it ->
+                        PickPhotoItem(
+                            it.uri,
+                            modifier = Modifier.size(itemSize),
+                            isSelected = uiState.itemSelected.path == it.path
+                        ) {
+                            onPhotoSelected.invoke(it)
                         }
-                    }
-            }
-            LazyVerticalGrid(
-                state = gridState,
-                contentPadding = PaddingValues(20.pxToDp()),
-                horizontalArrangement = Arrangement.spacedBy(10.pxToDp()),
-                verticalArrangement = Arrangement.spacedBy(12.pxToDp()),
-                columns = GridCells.Fixed(3),
-                modifier = Modifier
-                    .background(color = Color.White)
-                    .padding(paddingValues)
-            ) {
-                itemsIndexed(items = uiState.photos, key = { index, item -> item.id.toString() + index }) { index, it ->
-                    PickPhotoItem(
-                        it.uri,
-                        modifier = Modifier.size(itemSize),
-                        isSelected = uiState.itemSelected.id == it.id
-                    ) {
-                        onPhotoSelected.invoke(it)
                     }
                 }
             }
+
             if (uiState.isShowListFolder) {
                 Column(
                     modifier = Modifier
@@ -181,7 +160,7 @@ internal fun PickPhotoScreen(
                         .padding(start = listFolderPadding)
                 ) {
                     uiState.folders.forEach { folder ->
-                        FolderPickPhoto(folder.thumbnailUri,folder.folderName) {}
+                        FolderPickPhoto(folder.thumbnailUri, folder.folderName) {}
                     }
                     Spacer(modifier = Modifier.height(16.pxToDp()))
                 }
@@ -216,7 +195,7 @@ fun FolderPickPhoto(
     onClick: () -> Unit
 ) {
     val sizeImageFolder = remember { 50.pxToDp() }
-    val paddingRow = remember { 8.pxToDp()}
+    val paddingRow = remember { 8.pxToDp() }
     val pickPhotoImagePadding = remember { 6.pxToDp() }
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -245,5 +224,5 @@ fun FolderPickPhoto(
 @Preview
 @Composable
 internal fun PreviewPickPhotoScreen() {
-    PickPhotoScreen(uiState = PickPhotoState(), {}, {}, {}, {})
+    PickPhotoScreen(uiState = PickPhotoState(), {}, {})
 }

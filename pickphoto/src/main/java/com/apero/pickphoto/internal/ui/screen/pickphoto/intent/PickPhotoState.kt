@@ -10,7 +10,7 @@ import kotlinx.android.parcel.Parcelize
 @Immutable
 internal data class PickPhotoState(
     val photos: MutableList<PhotoModel> = mutableListOf(),
-    val folders: List<PhotoFolderModel> = mutableListOf(),
+    val folders: MutableList<PhotoFolderModel> = mutableListOf(),
     val lastItemPickPhoto: PhotoModel = PhotoModel(),
     val lastItemInFolder: PhotoModel = PhotoModel(),
     val folderSelected: PhotoFolderModel = PhotoFolderModel(),

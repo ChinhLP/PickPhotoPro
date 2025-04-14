@@ -7,15 +7,18 @@ import android.provider.MediaStore
 import com.apero.pickphoto.internal.data.model.PhotoFolderModel
 import com.apero.pickphoto.internal.data.model.PhotoModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 
 internal class GalleryRepositoryImpl : GalleryRepository {
     override suspend fun getPhotos(
         context: Context,
-        limit: Int,
-        lastPhotoDateAdded: Long?
-    ): List<PhotoModel> = withContext(Dispatchers.IO) {
-        val photos = mutableListOf<PhotoModel>()
+        limit: Int
+    ): Flow<List<PhotoModel>> = flow {
+        var offset = 0
+        var hasMorePhotos = true
 
         val projection = arrayOf(
             MediaStore.Images.Media._ID,
@@ -24,119 +27,104 @@ internal class GalleryRepositoryImpl : GalleryRepository {
             MediaStore.Images.Media.DATE_ADDED
         )
 
-        val selection = lastPhotoDateAdded?.let {
-            "${MediaStore.Images.Media.DATE_ADDED} < ?"
-        }
-
-        val selectionArgs = lastPhotoDateAdded?.let {
-            arrayOf(it.toString())
-        }
-
         val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
 
         val query = context.contentResolver.query(
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
             projection,
-            selection,
-            selectionArgs,
+            null,
+            null,
             sortOrder
         )
 
         query?.use { cursor ->
-            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-            val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME)
-            val folderColumn =
-                cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
-            val dateColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED)
+            while (hasMorePhotos) {
+                val photos = mutableListOf<PhotoModel>()
 
-            var count = 0
-            while (cursor.moveToNext() && count < limit) {
-                val id = cursor.getLong(idColumn)
-                val name = cursor.getString(nameColumn)
-                val folder = cursor.getString(folderColumn)
-                val date = cursor.getLong(dateColumn)
+                if (cursor.moveToPosition(offset)) {
+                    var count = 0
+                    do {
+                        val id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID))
+                        val name = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME))
+                        val folder = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME))
+                        val date = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED))
 
-                val contentUri = ContentUris.withAppendedId(
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                    id
-                )
+                        val contentUri = ContentUris.withAppendedId(
+                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                            id
+                        )
 
-                photos.add(
-                    PhotoModel(
-                        id = id.toString() + "_compressed",
-                        uri = contentUri,
-                        name = name,
-                        folder = folder,
-                        dateAdded = date
-                    )
-                )
-                count++
+                        photos.add(
+                            PhotoModel(
+                                path = contentUri.path + "_compressed",
+                                uri = contentUri,
+                                name = name,
+                                folder = folder,
+                                dateAdded = date
+                            )
+                        )
+                        count++
+                    } while (cursor.moveToNext() && count < limit)
+                }
+
+                emit(photos)
+                hasMorePhotos = photos.size == limit
+                offset += limit
             }
         }
-
-        photos
     }
 
-    override suspend fun getAllFolders(context: Context): List<PhotoFolderModel> =
-        withContext(Dispatchers.IO) {
-            val folders = mutableListOf<PhotoFolderModel>()
+    override suspend fun getAllFolders(context: Context): Flow<List<PhotoFolderModel>> = flow {
+        val projection = arrayOf(
+            MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
+            MediaStore.Images.Media.BUCKET_ID,
+            MediaStore.Images.Media._ID
+        )
 
-            val projection = arrayOf(
-                MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
-                MediaStore.Images.Media.BUCKET_ID,
-                MediaStore.Images.Media._ID
-            )
+        val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
+        val uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
 
-            val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
+        val cursor = context.contentResolver.query(
+            uri,
+            projection,
+            null,
+            null,
+            sortOrder
+        )
 
-            val uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        val folderMap = linkedMapOf<Pair<String, String>, MutableList<Uri>>()
 
-            val cursor = context.contentResolver.query(
-                uri,
-                projection,
-                null,
-                null,
-                sortOrder
-            )
+        cursor?.use {
+            val folderNameColumn = it.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
+            val folderIdColumn = it.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_ID)
+            val idColumn = it.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
 
-            // key = Pair(folderId, folderName)
-            val folderMap = linkedMapOf<Pair<String, String>, MutableList<Uri>>()
+            while (it.moveToNext()) {
+                val folderName = it.getString(folderNameColumn) ?: "Unknown"
+                val folderId = it.getString(folderIdColumn) ?: "0"
+                val id = it.getLong(idColumn)
+                val contentUri = ContentUris.withAppendedId(uri, id)
 
-            cursor?.use {
-                val folderNameColumn =
-                    it.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
-                val folderIdColumn = it.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_ID)
-                val idColumn = it.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-
-                while (it.moveToNext()) {
-                    val folderName = it.getString(folderNameColumn) ?: "Unknown"
-                    val folderId = it.getString(folderIdColumn) ?: "0"
-                    val id = it.getLong(idColumn)
-                    val contentUri = ContentUris.withAppendedId(uri, id)
-
-                    val key = folderId to folderName
-                    if (folderMap.containsKey(key)) {
-                        folderMap[key]?.add(contentUri)
-                    } else {
-                        folderMap[key] = mutableListOf(contentUri)
-                    }
-                }
+                val key = folderId to folderName
+                folderMap.getOrPut(key) { mutableListOf() }.add(contentUri)
             }
-
-            folderMap.forEach { (key, uris) ->
-                val (folderId, folderName) = key
-                folders.add(
-                    PhotoFolderModel(
-                        folderId = folderId,
-                        folderName = folderName,
-                        photos = uris.take(50).map { PhotoModel(uri = it) }.toMutableList(),
-                        thumbnailUri = uris.first()
-                    )
-                )
-            }
-
-            folders
         }
+
+        val allFolders = folderMap.map { (key, uris) ->
+            val (folderId, folderName) = key
+            PhotoFolderModel(
+                folderId = folderId,
+                folderName = folderName,
+                photos = uris.take(50).map { PhotoModel(uri = it) }.toMutableList(),
+                thumbnailUri = uris.first()
+            )
+        }
+
+        // Emit liên tục từng batch 10 folders
+        allFolders.chunked(10).forEach { chunk ->
+            emit(chunk)
+        }
+    }.flowOn(Dispatchers.IO)
 
     override suspend fun getMoreImagesInFolder(
         context: Context,
@@ -193,7 +181,7 @@ internal class GalleryRepositoryImpl : GalleryRepository {
 
                 photos.add(
                     PhotoModel(
-                        id = id.toString() + "_compressed",
+                        path = contentUri.path + "_compressed",
                         uri = contentUri,
                         name = name,
                         dateAdded = date

@@ -1,5 +1,6 @@
 package com.apero.pickphoto.internal.ui.screen.pickphoto.widget
 
+import android.content.Context
 import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -18,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
@@ -74,5 +76,5 @@ internal fun PickPhotoItem(
 @Preview
 @Composable
 fun PreviewPickPhotoItem() {
-    PickPhotoItem(uri = null, true) {}
+    PickPhotoItem(uri = null,isSelected = true) {}
 }

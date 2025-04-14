@@ -7,7 +7,7 @@ import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class PhotoModel(
-    val id : String? = null,
+    val path : String? = null,
     val uri : Uri? = null,
     val name : String = "",
     val folder : String = "",

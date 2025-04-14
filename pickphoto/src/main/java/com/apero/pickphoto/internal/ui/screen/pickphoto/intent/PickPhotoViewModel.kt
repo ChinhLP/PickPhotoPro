@@ -1,6 +1,7 @@
 package com.apero.pickphoto.internal.ui.screen.pickphoto.intent
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -31,24 +32,9 @@ internal class PickPhotoViewModel(
                 loadInitPhotos(intent.context)
             }
 
-            is PickPhotoIntent.LoadMorePhotos -> viewModelScope.launch {
-                loadMorePhotos(
-                    intent.context,
-                    intent.lastPhotoDateAdded
-                )
-            }
-
             is PickPhotoIntent.SelectPhoto -> selectPhoto(intent.itemSelected)
             is PickPhotoIntent.LoadFolders -> viewModelScope.launch {
                 loadFolders(intent.context)
-            }
-
-            is PickPhotoIntent.LoadMoreImageInFolder -> viewModelScope.launch {
-                loadMoreImageInFolder(
-                    intent.context,
-                    intent.folderId,
-                    intent.lastPhotoDateAdded
-                )
             }
 
             PickPhotoIntent.ChangeShowListFolder -> {
@@ -57,44 +43,15 @@ internal class PickPhotoViewModel(
         }
     }
 
-    private fun getItemInFolderTheLast() = viewModelScope.launch {
-        updateUiState {
-            if (folders.isNotEmpty()) {
-                val lastFolder = folders.last()
-                if (lastFolder.photos.isNotEmpty()) {
-                    copy(lastItemInFolder = lastFolder.photos.last())
-                } else {
-                    this
-                }
-            } else {
-                this
-            }
-        }
-    }
-
-    private fun getItemPickPhotoTheLast() =
-        viewModelScope.launch {
-            updateUiState {
-                if (photos.isNotEmpty()) {
-                    copy(lastItemPickPhoto = photos.last())
-                } else {
-                    this
-                }
-            }
-        }
 
     private fun loadInitPhotos(context: Context) =
         viewModelScope.launch {
-            val photos = galleryRepository.getPhotos(context, 50)
-            updateUiState { copy(photos = photos.toMutableList()) }
-            getItemPickPhotoTheLast()
-        }
-
-    private fun loadMorePhotos(context: Context, lastPhotoDateAdded: Long?) =
-        viewModelScope.launch {
-            val photos = galleryRepository.getPhotos(context, 50, lastPhotoDateAdded)
-            updateUiState { copy(photos = this.photos.apply { addAll(photos) }) }
-            getItemPickPhotoTheLast()
+            galleryRepository.getPhotos(context, 50).collect { photoList ->
+                updateUiState {
+                    photos.addAll(photoList)
+                    copy(photos = (photos))
+                }
+            }
         }
 
     private fun selectPhoto(itemSelected: PhotoModel) {
@@ -103,29 +60,12 @@ internal class PickPhotoViewModel(
 
     private fun loadFolders(context: Context) =
         viewModelScope.launch {
-            val folders = galleryRepository.getAllFolders(context)
-            updateUiState { copy(folders = folders) }
+            galleryRepository.getAllFolders(context).collect { folderBatch ->
+                updateUiState {
+                    folders.addAll(folderBatch)
+                    copy(folders = folders)
+                }
+            }
         }
 
-    private fun loadMoreImageInFolder(
-        context: Context,
-        folderId: String,
-        lastPhotoDateAdded: Long? = null
-    ) =
-        viewModelScope.launch {
-            val photos =
-                galleryRepository.getMoreImagesInFolder(context, folderId, 50, lastPhotoDateAdded)
-            updateUiState {
-                copy(
-                    folders = folders.map { folder ->
-                        if (folder.folderId == folderId) {
-                            folder.copy(
-                                photos = folder.photos.apply { addAll(photos.toMutableList()) }
-                            )
-                        } else folder
-                    }
-                )
-            }
-            getItemInFolderTheLast()
-        }
 }
