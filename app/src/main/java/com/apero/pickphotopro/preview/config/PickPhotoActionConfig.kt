@@ -8,7 +8,7 @@ import com.apero.pickphotopro.preview.preview.PreviewActivity.Companion.IMAGE_PR
 import java.lang.ref.WeakReference
 
 class PickPhotoActionConfig() : VslPickPhotoActionConfig {
-    override fun actionAfterApprove(pathImage: String, weakActivity: WeakReference<Activity>) {
+    override fun actionAfterApprove(pathImage: String?, weakActivity: WeakReference<Activity>) {
         weakActivity.get()?.let { activity ->
             activity.startActivity(
                 Intent(activity, PreviewActivity::class.java).putExtra(

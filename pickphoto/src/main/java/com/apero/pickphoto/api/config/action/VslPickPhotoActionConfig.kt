@@ -5,7 +5,7 @@ import java.lang.ref.WeakReference
 
 interface VslPickPhotoActionConfig {
     fun actionAfterApprove(
-        pathImage: String,
+        pathImage: String?,
         weakActivity: WeakReference<Activity>
     )
 

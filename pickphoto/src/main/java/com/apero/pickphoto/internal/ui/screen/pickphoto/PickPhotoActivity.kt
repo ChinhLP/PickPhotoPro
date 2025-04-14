@@ -74,6 +74,15 @@ internal class PickPhotoActivity : BaseComposeActivity() {
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         PickPhotoScreen(
             uiState = uiState,
+            onNext = {
+                DIContainer.vslPickPhotoActionConfig.actionAfterApprove(
+                    "content://media/" + it,
+                    WeakReference(this)
+                )
+            },
+            onBackPressed = {
+                onBack()
+            },
             onPhotoSelected = {
                 viewModel.onEvent(PickPhotoIntent.SelectPhoto(it))
             },
@@ -91,6 +100,8 @@ internal class PickPhotoActivity : BaseComposeActivity() {
 @Composable
 internal fun PickPhotoScreen(
     uiState: PickPhotoState,
+    onNext: (String?) -> Unit,
+    onBackPressed: () -> Unit,
     onFolderSelected: (PhotoFolderModel) -> Unit,
     onPhotoSelected: (PhotoModel) -> Unit,
     onClickShowListFolder: () -> Unit,
@@ -111,7 +122,10 @@ internal fun PickPhotoScreen(
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.vsl_ic_close),
-                    contentDescription = null
+                    contentDescription = null,
+                    modifier = Modifier.clickable {
+                        onBackPressed.invoke()
+                    }
                 )
                 TitlePickPhoto {
                     onClickShowListFolder.invoke()
@@ -119,6 +133,9 @@ internal fun PickPhotoScreen(
                 VslTextView(
                     text = stringResource(R.string.vsl_pick_photo_next),
                     textStyle = LocalCustomTypography.current.Headline.semiBold,
+                    modifier = Modifier.clickable {
+                        onNext.invoke(uiState.itemSelected.path)
+                    }
                 )
             }
         },
@@ -142,7 +159,7 @@ internal fun PickPhotoScreen(
                 ) {
                     itemsIndexed(
                         items = if (uiState.folderSelected.folderId == NAME_ALL_PHOTOS) uiState.photos else uiState.folderSelected.photos,
-                        key = { _, item -> item.path.toString()}) { _, it ->
+                        key = { _, item -> item.path.toString() }) { _, it ->
                         PickPhotoItem(
                             it.uri,
                             modifier = Modifier.size(itemSize),
@@ -236,5 +253,5 @@ fun FolderPickPhoto(
 @Preview
 @Composable
 internal fun PreviewPickPhotoScreen() {
-    PickPhotoScreen(uiState = PickPhotoState(), {}, {}, {})
+    PickPhotoScreen(uiState = PickPhotoState(), {}, {}, {}, {}, {})
 }

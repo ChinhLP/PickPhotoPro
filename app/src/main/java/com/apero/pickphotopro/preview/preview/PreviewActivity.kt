@@ -1,6 +1,7 @@
 package com.apero.pickphotopro.preview.preview
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
@@ -9,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -57,42 +59,18 @@ fun PreviewScreen(url: String?, backClick: () -> Unit) {
                 })
         },
         content = { paddingValues ->
-            AvatarImage(
-                url, modifier = Modifier
-                    .padding(paddingValues))
+            AsyncImage(
+                model = url,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                placeholder = painterResource(id = R.drawable.img_place_holder),
+                error = painterResource(id = R.drawable.img_error)
+            )
         }
     )
 }
 
-@Composable
-fun AvatarImage(url: String?, modifier: Modifier) {
-    val shimmerInstance = rememberShimmer(shimmerBounds = ShimmerBounds.View)
-    val painter = rememberAsyncImagePainter(model = url)
-    val state = painter.state.collectAsStateWithLifecycle()
-
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .clip(CircleShape)
-    ) {
-        if (state.value is AsyncImagePainter.State.Loading)
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .shimmer(shimmerInstance) // Hiệu ứng shimmer loading
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-            )
-    }
-
-    AsyncImage(
-        model = url,
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier.fillMaxSize(),
-        placeholder = painterResource(id = R.drawable.img_place_holder),
-        error = painterResource(id = R.drawable.img_error)
-    )
-}
 
 @Preview
 @Composable
