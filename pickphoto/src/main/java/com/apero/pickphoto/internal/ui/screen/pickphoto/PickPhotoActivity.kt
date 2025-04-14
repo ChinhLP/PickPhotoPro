@@ -40,10 +40,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.apero.pickphoto.R
 import com.apero.pickphoto.di.DIContainer
 import com.apero.pickphoto.internal.base.BaseComposeActivity
+import com.apero.pickphoto.internal.data.model.PhotoFolderModel
 import com.apero.pickphoto.internal.data.model.PhotoModel
 import com.apero.pickphoto.internal.designsystem.LocalCustomTypography
 import com.apero.pickphoto.internal.designsystem.component.VslTextView
 import com.apero.pickphoto.internal.designsystem.pxToDp
+import com.apero.pickphoto.internal.ui.screen.pickphoto.intent.NAME_ALL_PHOTOS
 import com.apero.pickphoto.internal.ui.screen.pickphoto.intent.PickPhotoIntent
 import com.apero.pickphoto.internal.ui.screen.pickphoto.intent.PickPhotoState
 import com.apero.pickphoto.internal.ui.screen.pickphoto.intent.PickPhotoViewModel
@@ -75,6 +77,9 @@ internal class PickPhotoActivity : BaseComposeActivity() {
             onPhotoSelected = {
                 viewModel.onEvent(PickPhotoIntent.SelectPhoto(it))
             },
+            onFolderSelected = {
+                viewModel.onEvent(PickPhotoIntent.SelectFolder(it))
+            },
             onClickShowListFolder = {
                 viewModel.onEvent(PickPhotoIntent.ChangeShowListFolder)
             }
@@ -86,6 +91,7 @@ internal class PickPhotoActivity : BaseComposeActivity() {
 @Composable
 internal fun PickPhotoScreen(
     uiState: PickPhotoState,
+    onFolderSelected: (PhotoFolderModel) -> Unit,
     onPhotoSelected: (PhotoModel) -> Unit,
     onClickShowListFolder: () -> Unit,
 ) {
@@ -118,7 +124,6 @@ internal fun PickPhotoScreen(
         },
         content = { paddingValues ->
             val scrollState = rememberScrollState()
-            val gridState = rememberLazyGridState()
             val itemSize = remember { 100.pxToDp() }
             val listFolderPadding = remember { 8.pxToDp() }
             if (uiState.photos.isEmpty()) {
@@ -127,7 +132,6 @@ internal fun PickPhotoScreen(
                 }
             } else {
                 LazyVerticalGrid(
-                    state = gridState,
                     contentPadding = PaddingValues(20.pxToDp()),
                     horizontalArrangement = Arrangement.spacedBy(10.pxToDp()),
                     verticalArrangement = Arrangement.spacedBy(12.pxToDp()),
@@ -137,17 +141,18 @@ internal fun PickPhotoScreen(
                         .padding(paddingValues)
                 ) {
                     itemsIndexed(
-                        items = uiState.photos,
-                        key = { index, item -> item.path.toString() + index }) { index, it ->
+                        items = if (uiState.folderSelected.folderId == NAME_ALL_PHOTOS) uiState.photos else uiState.folderSelected.photos,
+                        key = { _, item -> item.path.toString()}) { _, it ->
                         PickPhotoItem(
                             it.uri,
                             modifier = Modifier.size(itemSize),
-                            isSelected = uiState.itemSelected.path == it.path
+                            isSelected = if (uiState.folderSelected.folderId == NAME_ALL_PHOTOS) uiState.itemSelected.path == it.path else uiState.itemSelected.path == it.path
                         ) {
                             onPhotoSelected.invoke(it)
                         }
                     }
                 }
+
             }
 
             if (uiState.isShowListFolder) {
@@ -160,7 +165,13 @@ internal fun PickPhotoScreen(
                         .padding(start = listFolderPadding)
                 ) {
                     uiState.folders.forEach { folder ->
-                        FolderPickPhoto(folder.thumbnailUri, folder.folderName) {}
+                        FolderPickPhoto(
+                            folder.thumbnailUri,
+                            folder.photos.size,
+                            folder.folderName
+                        ) {
+                            onFolderSelected.invoke(folder)
+                        }
                     }
                     Spacer(modifier = Modifier.height(16.pxToDp()))
                 }
@@ -190,6 +201,7 @@ fun TitlePickPhoto(modifier: Modifier = Modifier, onClick: () -> Unit) {
 @Composable
 fun FolderPickPhoto(
     url: Uri?,
+    numberPhotoInFolder: Int,
     nameFolder: String,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
@@ -214,7 +226,7 @@ fun FolderPickPhoto(
                 .padding(end = pickPhotoImagePadding)
         )
         VslTextView(
-            text = nameFolder,
+            text = "$nameFolder($numberPhotoInFolder)",
             textAlign = TextAlign.Center,
             textStyle = LocalCustomTypography.current.Headline.semiBold,
         )
@@ -224,5 +236,5 @@ fun FolderPickPhoto(
 @Preview
 @Composable
 internal fun PreviewPickPhotoScreen() {
-    PickPhotoScreen(uiState = PickPhotoState(), {}, {})
+    PickPhotoScreen(uiState = PickPhotoState(), {}, {}, {})
 }

@@ -44,10 +44,14 @@ internal class GalleryRepositoryImpl : GalleryRepository {
                 if (cursor.moveToPosition(offset)) {
                     var count = 0
                     do {
-                        val id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID))
-                        val name = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME))
-                        val folder = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME))
-                        val date = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED))
+                        val id =
+                            cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID))
+                        val name =
+                            cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME))
+                        val folder =
+                            cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME))
+                        val date =
+                            cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED))
 
                         val contentUri = ContentUris.withAppendedId(
                             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
@@ -56,7 +60,7 @@ internal class GalleryRepositoryImpl : GalleryRepository {
 
                         photos.add(
                             PhotoModel(
-                                path = contentUri.path + "_compressed",
+                                path = contentUri.path,
                                 uri = contentUri,
                                 name = name,
                                 folder = folder,
@@ -95,7 +99,8 @@ internal class GalleryRepositoryImpl : GalleryRepository {
         val folderMap = linkedMapOf<Pair<String, String>, MutableList<Uri>>()
 
         cursor?.use {
-            val folderNameColumn = it.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
+            val folderNameColumn =
+                it.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
             val folderIdColumn = it.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_ID)
             val idColumn = it.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
 
@@ -115,7 +120,8 @@ internal class GalleryRepositoryImpl : GalleryRepository {
             PhotoFolderModel(
                 folderId = folderId,
                 folderName = folderName,
-                photos = uris.take(50).map { PhotoModel(uri = it) }.toMutableList(),
+                photos = uris.take(50).map { PhotoModel(path = it.path, uri = it) }
+                    .toMutableList(),
                 thumbnailUri = uris.first()
             )
         }

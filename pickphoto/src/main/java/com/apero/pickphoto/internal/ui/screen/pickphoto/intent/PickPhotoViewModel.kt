@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.apero.pickphoto.internal.data.model.PhotoFolderModel
 import com.apero.pickphoto.internal.data.model.PhotoModel
 import com.apero.pickphoto.internal.data.repo.GalleryRepository
 import kotlinx.coroutines.flow.StateFlow
@@ -40,7 +41,16 @@ internal class PickPhotoViewModel(
             PickPhotoIntent.ChangeShowListFolder -> {
                 updateUiState { copy(isShowListFolder = !isShowListFolder) }
             }
+
+            is PickPhotoIntent.SelectFolder -> {
+                selectFolder(intent.folderSelected)
+            }
         }
+    }
+
+    private fun selectFolder(folderSelected: PhotoFolderModel) {
+        onEvent(PickPhotoIntent.ChangeShowListFolder)
+        updateUiState { copy(folderSelected = folderSelected) }
     }
 
 
@@ -62,8 +72,15 @@ internal class PickPhotoViewModel(
         viewModelScope.launch {
             galleryRepository.getAllFolders(context).collect { folderBatch ->
                 updateUiState {
+                    val index = folders.indexOfFirst { it.folderId == NAME_ALL_PHOTOS }
+                    if (index != -1) {
+                        folders[index] = folders[index].copy(
+                            photos = photos,
+                            thumbnailUri = photos.firstOrNull()?.uri
+                        )
+                    }
                     folders.addAll(folderBatch)
-                    copy(folders = folders)
+                    copy(folders = folders, folderSelected = folders[index])
                 }
             }
         }
