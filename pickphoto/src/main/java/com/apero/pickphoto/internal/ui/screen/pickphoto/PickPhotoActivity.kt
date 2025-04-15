@@ -20,13 +20,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -50,6 +48,7 @@ import com.apero.pickphoto.internal.ui.screen.pickphoto.intent.PickPhotoIntent
 import com.apero.pickphoto.internal.ui.screen.pickphoto.intent.PickPhotoState
 import com.apero.pickphoto.internal.ui.screen.pickphoto.intent.PickPhotoViewModel
 import com.apero.pickphoto.internal.ui.screen.pickphoto.widget.PickPhotoItem
+import com.apero.pickphoto.internal.ui.screen.pickphoto.widget.PickPhotoItemOption
 import com.apero.pickphoto.internal.ui.widgets.PickPhotoImage
 import java.lang.ref.WeakReference
 
@@ -157,13 +156,42 @@ internal fun PickPhotoScreen(
                         .background(color = Color.White)
                         .padding(paddingValues)
                 ) {
+                    item {
+                        PickPhotoItemOption(
+                            image = R.drawable.vsl_ic_camera,
+                            modifier = Modifier.size(itemSize),
+                            content = stringResource(R.string.vsl_pick_photo_label_demo)
+                        ) {
+
+                        }
+                    }
+                    item {
+                        PickPhotoItemOption(
+                            image = R.drawable.vsl_ic_add_photo,
+                            modifier = Modifier.size(itemSize),
+                            content = stringResource(R.string.vsl_pick_photo_label_add_photo)
+                        ) {
+
+                        }
+                    }
+
+                    item {
+                        PickPhotoItem(
+                            R.drawable.img_demo,
+                            modifier = Modifier.size(itemSize),
+                            isSelected = uiState.itemSelected.path == it.path
+                        ) {
+                            onPhotoSelected.invoke()
+                        }
+                    }
+
                     itemsIndexed(
                         items = if (uiState.folderSelected.folderId == NAME_ALL_PHOTOS) uiState.photos else uiState.folderSelected.photos,
                         key = { _, item -> item.path.toString() }) { _, it ->
                         PickPhotoItem(
                             it.uri,
                             modifier = Modifier.size(itemSize),
-                            isSelected = if (uiState.folderSelected.folderId == NAME_ALL_PHOTOS) uiState.itemSelected.path == it.path else uiState.itemSelected.path == it.path
+                            isSelected = uiState.itemSelected.path == it.path
                         ) {
                             onPhotoSelected.invoke(it)
                         }

@@ -2,4 +2,6 @@
 <resources>
     <string name="vsl_pick_photo_title">Camera</string>
     <string name="vsl_pick_photo_next">Next</string>
+    <string name="vsl_pick_photo_label_demo">Demo</string>
+    <string name="vsl_pick_photo_label_add_photo">Add photo</string>
 </resources>

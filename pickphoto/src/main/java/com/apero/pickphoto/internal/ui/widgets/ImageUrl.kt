@@ -25,7 +25,7 @@ fun PickPhotoImage(image: Any?, modifier: Modifier = Modifier) {
     val painter = rememberAsyncImagePainter(
         model = ImageRequest.Builder(context)
             .data(image)
-            .size(350)
+            .size(450)
             .crossfade(false)
             .build(),
         placeholder = placeholder,
