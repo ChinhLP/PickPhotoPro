@@ -1,6 +1,8 @@
 package com.apero.pickphoto.internal.ui.screen.pickphoto
 
+import android.Manifest
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -25,11 +27,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.NonRestartableComposable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -50,6 +57,9 @@ import com.apero.pickphoto.internal.ui.screen.pickphoto.intent.PickPhotoViewMode
 import com.apero.pickphoto.internal.ui.screen.pickphoto.widget.PickPhotoItem
 import com.apero.pickphoto.internal.ui.screen.pickphoto.widget.PickPhotoItemOption
 import com.apero.pickphoto.internal.ui.widgets.PickPhotoImage
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.PermissionStatus
+import com.google.accompanist.permissions.rememberPermissionState
 import java.lang.ref.WeakReference
 
 internal class PickPhotoActivity : BaseComposeActivity() {
@@ -73,9 +83,12 @@ internal class PickPhotoActivity : BaseComposeActivity() {
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         PickPhotoScreen(
             uiState = uiState,
+            onRequestPermission = {
+
+            },
             onNext = {
                 DIContainer.vslPickPhotoActionConfig.actionAfterApprove(
-                    "content://media/" + it,
+                    if (it == uiState.pathImageSample) it else "content://media/" + it,
                     WeakReference(this)
                 )
             },
@@ -95,10 +108,11 @@ internal class PickPhotoActivity : BaseComposeActivity() {
     }
 }
 
-
+@NonRestartableComposable
 @Composable
 internal fun PickPhotoScreen(
     uiState: PickPhotoState,
+    onRequestPermission: () -> Unit,
     onNext: (String?) -> Unit,
     onBackPressed: () -> Unit,
     onFolderSelected: (PhotoFolderModel) -> Unit,
@@ -142,49 +156,53 @@ internal fun PickPhotoScreen(
             val scrollState = rememberScrollState()
             val itemSize = remember { 100.pxToDp() }
             val listFolderPadding = remember { 8.pxToDp() }
-            if (uiState.photos.isEmpty()) {
-                Box {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            val paddingGrid = remember { 20.pxToDp() }
+            val horizontalArrangementSpace = 10.pxToDp()
+            val verticalArrangementSpace = remember { 12.pxToDp() }
+            LazyVerticalGrid(
+                contentPadding = PaddingValues(paddingGrid),
+                horizontalArrangement = Arrangement.spacedBy(horizontalArrangementSpace),
+                verticalArrangement = Arrangement.spacedBy(verticalArrangementSpace),
+                columns = GridCells.Fixed(3),
+                modifier = Modifier
+                    .background(color = Color.White)
+                    .padding(paddingValues)
+            ) {
+                item {
+                    PickPhotoItemOption(
+                        image = R.drawable.vsl_ic_camera,
+                        modifier = Modifier.size(itemSize),
+                        content = stringResource(R.string.vsl_pick_photo_label_demo)
+                    ) {
+
+                    }
                 }
-            } else {
-                LazyVerticalGrid(
-                    contentPadding = PaddingValues(20.pxToDp()),
-                    horizontalArrangement = Arrangement.spacedBy(10.pxToDp()),
-                    verticalArrangement = Arrangement.spacedBy(12.pxToDp()),
-                    columns = GridCells.Fixed(3),
-                    modifier = Modifier
-                        .background(color = Color.White)
-                        .padding(paddingValues)
-                ) {
-                    item {
-                        PickPhotoItemOption(
-                            image = R.drawable.vsl_ic_camera,
-                            modifier = Modifier.size(itemSize),
-                            content = stringResource(R.string.vsl_pick_photo_label_demo)
-                        ) {
+                item {
+                    PickPhotoItemOption(
+                        image = R.drawable.vsl_ic_add_photo,
+                        modifier = Modifier.size(itemSize),
+                        content = stringResource(R.string.vsl_pick_photo_label_add_photo)
+                    ) {
 
-                        }
                     }
-                    item {
-                        PickPhotoItemOption(
-                            image = R.drawable.vsl_ic_add_photo,
-                            modifier = Modifier.size(itemSize),
-                            content = stringResource(R.string.vsl_pick_photo_label_add_photo)
-                        ) {
+                }
 
-                        }
+                item {
+                    PickPhotoItem(
+                        R.drawable.img_demo,
+                        modifier = Modifier.size(itemSize),
+                        isSelected = uiState.itemSelected.path == uiState.pathImageSample
+                    ) {
+                        onPhotoSelected.invoke(
+                            PhotoModel(
+                                path = uiState.pathImageSample,
+                                name = "Sample Photo"
+                            )
+                        )
                     }
+                }
 
-                    item {
-                        PickPhotoItem(
-                            R.drawable.img_demo,
-                            modifier = Modifier.size(itemSize),
-                            isSelected = uiState.itemSelected.path == it.path
-                        ) {
-                            onPhotoSelected.invoke()
-                        }
-                    }
-
+                if (uiState.photos.isEmpty()) {
                     itemsIndexed(
                         items = if (uiState.folderSelected.folderId == NAME_ALL_PHOTOS) uiState.photos else uiState.folderSelected.photos,
                         key = { _, item -> item.path.toString() }) { _, it ->
@@ -199,6 +217,7 @@ internal fun PickPhotoScreen(
                 }
 
             }
+
 
             if (uiState.isShowListFolder) {
                 Column(
@@ -225,6 +244,7 @@ internal fun PickPhotoScreen(
     )
 }
 
+@NonRestartableComposable
 @Composable
 fun TitlePickPhoto(modifier: Modifier = Modifier, onClick: () -> Unit) {
     Row(
@@ -243,6 +263,7 @@ fun TitlePickPhoto(modifier: Modifier = Modifier, onClick: () -> Unit) {
     }
 }
 
+@NonRestartableComposable
 @Composable
 fun FolderPickPhoto(
     url: Uri?,
@@ -281,5 +302,5 @@ fun FolderPickPhoto(
 @Preview
 @Composable
 internal fun PreviewPickPhotoScreen() {
-    PickPhotoScreen(uiState = PickPhotoState(), {}, {}, {}, {}, {})
+    PickPhotoScreen(uiState = PickPhotoState(), {}, {}, {}, {}, {}, {})
 }

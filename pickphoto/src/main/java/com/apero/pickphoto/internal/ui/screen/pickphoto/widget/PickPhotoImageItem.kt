@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.NonRestartableComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.apero.pickphoto.R
 import com.apero.pickphoto.internal.designsystem.LocalCustomTypography
@@ -42,6 +44,7 @@ import com.apero.pickphoto.internal.designsystem.pxToDp
 import com.apero.pickphoto.internal.ui.widgets.PickPhotoImage
 import kotlin.math.roundToInt
 
+@NonRestartableComposable
 @Composable
 internal fun PickPhotoItem(
     image: Any?,
@@ -114,6 +117,7 @@ internal fun PickPhotoItem(
     }
 }
 
+
 @Composable
 internal fun PickPhotoItemOption(
     image: Any?,
@@ -121,36 +125,34 @@ internal fun PickPhotoItemOption(
     modifier: Modifier = Modifier,
     onSelect: () -> Unit
 ) {
-    val shape = remember { RoundedCornerShape(16.dp) }
-    var parentSize by remember { mutableStateOf(Offset(0f, 0f)) }
-    val iconSize = remember(parentSize) {
-        (parentSize.x * 0.16f).pxToDp()
-    }
+    val shape = RoundedCornerShape(16.dp)
+    var parentSize by remember { mutableStateOf(IntSize.Zero) }
+
     Box(
         modifier = modifier
-            .fillMaxSize()
             .clip(shape)
-            .clickable {
-                onSelect.invoke()
-            }
-            .background(color = colorResource(R.color.vsl_pick_photo_bg_item_camera))
-            .onSizeChanged { size ->
-                parentSize = Offset(size.width.toFloat(), size.height.toFloat())
-            }) {
-        Column (
+            .clickable(onClick = onSelect)
+            .background(colorResource(R.color.vsl_pick_photo_bg_item_camera))
+            .onSizeChanged { parentSize = it }
+    ) {
+        val iconSize = remember(parentSize) {
+            (parentSize.width * 0.16f).pxToDp()
+        }
+
+        Column(
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(59f / 68f)
-                .padding(vertical = 16.pxToDp() , horizontal = 20.pxToDp())
+                .padding(vertical = 16.pxToDp(), horizontal = 20.pxToDp())
                 .align(Alignment.Center)
         ) {
             key(image) {
                 PickPhotoImage(
-                    image, modifier = Modifier
+                    image = image,
+                    modifier = Modifier
                         .clip(shape)
-                        .graphicsLayer(clip = true)
                         .size(iconSize)
                 )
             }
@@ -161,8 +163,6 @@ internal fun PickPhotoItemOption(
                 textStyle = LocalCustomTypography.current.Headline.medium,
             )
         }
-
-
     }
 }
 

@@ -2,8 +2,17 @@ package com.apero.pickphoto.internal.data.repo
 
 import android.content.ContentUris
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
 import android.provider.MediaStore
+import android.util.Log
+import androidx.core.content.ContextCompat
+import coil3.ImageLoader
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.apero.pickphoto.internal.data.model.PhotoFolderModel
 import com.apero.pickphoto.internal.data.model.PhotoModel
 import kotlinx.coroutines.Dispatchers
@@ -11,6 +20,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
+import androidx.core.graphics.createBitmap
+import com.apero.pickphoto.di.DIContainer
+import java.io.File
+import java.io.FileOutputStream
 
 internal class GalleryRepositoryImpl : GalleryRepository {
     override suspend fun getPhotos(
@@ -197,5 +210,51 @@ internal class GalleryRepositoryImpl : GalleryRepository {
         }
 
         photos
+    }
+
+    override suspend fun cacheDrawableImage(context: Context, drawableResId: Int): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val drawable = ContextCompat.getDrawable(context, drawableResId) ?: return@withContext null
+
+                val bitmap = if (drawable is BitmapDrawable) {
+                    drawable.bitmap
+                } else {
+                    createBitmap(drawable.intrinsicWidth, drawable.intrinsicHeight).also {
+                        val canvas = Canvas(it)
+                        drawable.setBounds(0, 0, canvas.width, canvas.height)
+                        drawable.draw(canvas)
+                    }
+                }
+
+                // Lưu bitmap vào file trong cache dir
+                val fileName = "cached_drawable_${drawableResId}.png"
+                val file = File(context.cacheDir, fileName)
+                FileOutputStream(file).use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                }
+
+                // Nạp vào cache Coil (tuỳ bạn, có thể bỏ nếu chỉ cần path)
+                val imageLoader = ImageLoader.Builder(context)
+                    .crossfade(false)
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .build()
+
+                val request = ImageRequest.Builder(context)
+                    .data(file)
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .build()
+
+                imageLoader.execute(request)
+
+                DIContainer.pathImageSample = file.absolutePath
+                return@withContext file.absolutePath
+            } catch (e: Exception) {
+                Log.e("CacheDrawable", "Failed to cache drawable", e)
+                return@withContext null
+            }
+        }
     }
 }

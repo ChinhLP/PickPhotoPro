@@ -19,4 +19,6 @@ internal interface GalleryRepository {
         limit: Int,
         lastPhotoDateAdded: Long?
     ): List<PhotoModel>
+
+    suspend fun cacheDrawableImage(context: Context, drawableResId: Int) : String?
 }
