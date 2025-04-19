@@ -47,7 +47,13 @@ internal class PickPhotoViewModel(
             is PickPhotoIntent.SelectFolder -> {
                 selectFolder(intent.folderSelected)
             }
+
+            is PickPhotoIntent.setPhotoPermissionFullGranted -> setPhotoPermissionFullGranted(intent.isGranted)
         }
+    }
+
+    private fun setPhotoPermissionFullGranted(isGranted: Boolean) {
+        updateUiState { copy(isFullPhotoPermissionGranted = isGranted) }
     }
 
     private fun selectFolder(folderSelected: PhotoFolderModel) {

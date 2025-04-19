@@ -1,9 +1,18 @@
 package com.apero.pickphoto.internal.ui.screen.pickphoto
 
 import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -41,6 +50,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.apero.pickphoto.R
 import com.apero.pickphoto.di.DIContainer
@@ -50,22 +60,47 @@ import com.apero.pickphoto.internal.data.model.PhotoModel
 import com.apero.pickphoto.internal.designsystem.LocalCustomTypography
 import com.apero.pickphoto.internal.designsystem.component.VslTextView
 import com.apero.pickphoto.internal.designsystem.pxToDp
+import com.apero.pickphoto.internal.ui.screen.camera.CameraActivity
 import com.apero.pickphoto.internal.ui.screen.pickphoto.intent.NAME_ALL_PHOTOS
 import com.apero.pickphoto.internal.ui.screen.pickphoto.intent.PickPhotoIntent
 import com.apero.pickphoto.internal.ui.screen.pickphoto.intent.PickPhotoState
 import com.apero.pickphoto.internal.ui.screen.pickphoto.intent.PickPhotoViewModel
+import com.apero.pickphoto.internal.ui.screen.pickphoto.widget.PickPhotoDialogPermission
 import com.apero.pickphoto.internal.ui.screen.pickphoto.widget.PickPhotoItem
 import com.apero.pickphoto.internal.ui.screen.pickphoto.widget.PickPhotoItemOption
 import com.apero.pickphoto.internal.ui.widgets.PickPhotoImage
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.PermissionStatus
-import com.google.accompanist.permissions.rememberPermissionState
+import com.apero.pickphoto.util.PermissionUtil
+
 import java.lang.ref.WeakReference
 
 internal class PickPhotoActivity : BaseComposeActivity() {
 
     private val viewModel by lazy {
         DIContainer.viewModelContainer.getViewModel(this, PickPhotoViewModel::class.java)
+    }
+
+    private val permissionUtil by lazy {
+        PermissionUtil(DIContainer.repositoryContainer.sharedPref)
+    }
+
+    private val requestPermissionsLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            permissions.entries.forEach { entry ->
+                if (entry.value) {
+                    viewModel.onEvent(PickPhotoIntent.setPhotoPermissionFullGranted(true))
+                    viewModel.onEvent(PickPhotoIntent.LoadInitPhotos(this@PickPhotoActivity))
+                    viewModel.onEvent(PickPhotoIntent.LoadFolders(this@PickPhotoActivity))
+                }
+            }
+        }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+        deviceId: Int
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults, deviceId)
     }
 
     override fun onBack() {
@@ -76,15 +111,57 @@ internal class PickPhotoActivity : BaseComposeActivity() {
         super.onCreate(savedInstanceState)
         viewModel.onEvent(PickPhotoIntent.LoadInitPhotos(this@PickPhotoActivity))
         viewModel.onEvent(PickPhotoIntent.LoadFolders(this@PickPhotoActivity))
+        if (permissionUtil.checkPermissionsPhoto(WeakReference(this))) {
+            permissionUtil.requestPermissionsPhoto(WeakReference(this), requestPermissionsLauncher)
+        }
     }
 
     @Composable
     override fun SetupUi() {
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+        var shouldShowDialogCustomPermission by remember { mutableStateOf(false) }
+        var showDialog by remember { mutableStateOf(true) }
+
+        val activityResultLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) {
+            if (permissionUtil.checkPermissionsPhoto(WeakReference(this@PickPhotoActivity))) {
+                viewModel.onEvent(PickPhotoIntent.setPhotoPermissionFullGranted(true))
+                viewModel.onEvent(PickPhotoIntent.LoadInitPhotos(this@PickPhotoActivity))
+                viewModel.onEvent(PickPhotoIntent.LoadFolders(this@PickPhotoActivity))
+            }
+        }
+
+        if (shouldShowDialogCustomPermission) {
+            PickPhotoDialogPermission(
+                onConfirm = {
+                    showDialog = false
+                    shouldShowDialogCustomPermission = false
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", this@PickPhotoActivity.packageName, null)
+                    }
+                    activityResultLauncher.launch(intent)
+                },
+                onDismiss = {
+                    showDialog = false
+                    shouldShowDialogCustomPermission = false
+                }
+            )
+        }
+
         PickPhotoScreen(
             uiState = uiState,
             onRequestPermission = {
-
+                permissionUtil.requestPermissionsPhoto(
+                    WeakReference(this),
+                    requestPermissionsLauncher
+                ) {
+                    shouldShowDialogCustomPermission = true
+                }
+            },
+            onOpenCamera = {
+                val intent = Intent(this, CameraActivity::class.java)
+                startActivity(intent)
             },
             onNext = {
                 DIContainer.vslPickPhotoActionConfig.actionAfterApprove(
@@ -108,10 +185,10 @@ internal class PickPhotoActivity : BaseComposeActivity() {
     }
 }
 
-@NonRestartableComposable
 @Composable
 internal fun PickPhotoScreen(
     uiState: PickPhotoState,
+    onOpenCamera: () -> Unit,
     onRequestPermission: () -> Unit,
     onNext: (String?) -> Unit,
     onBackPressed: () -> Unit,
@@ -174,18 +251,19 @@ internal fun PickPhotoScreen(
                         modifier = Modifier.size(itemSize),
                         content = stringResource(R.string.vsl_pick_photo_label_demo)
                     ) {
-
+                        onOpenCamera()
                     }
                 }
-                item {
-                    PickPhotoItemOption(
-                        image = R.drawable.vsl_ic_add_photo,
-                        modifier = Modifier.size(itemSize),
-                        content = stringResource(R.string.vsl_pick_photo_label_add_photo)
-                    ) {
-
+                if (uiState.isFullPhotoPermissionGranted.not())
+                    item {
+                        PickPhotoItemOption(
+                            image = R.drawable.vsl_ic_add_photo,
+                            modifier = Modifier.size(itemSize),
+                            content = stringResource(R.string.vsl_pick_photo_label_add_photo)
+                        ) {
+                            onRequestPermission()
+                        }
                     }
-                }
 
                 item {
                     PickPhotoItem(
@@ -202,7 +280,7 @@ internal fun PickPhotoScreen(
                     }
                 }
 
-                if (uiState.photos.isEmpty()) {
+                if (uiState.photos.isNotEmpty()) {
                     itemsIndexed(
                         items = if (uiState.folderSelected.folderId == NAME_ALL_PHOTOS) uiState.photos else uiState.folderSelected.photos,
                         key = { _, item -> item.path.toString() }) { _, it ->
@@ -302,5 +380,5 @@ fun FolderPickPhoto(
 @Preview
 @Composable
 internal fun PreviewPickPhotoScreen() {
-    PickPhotoScreen(uiState = PickPhotoState(), {}, {}, {}, {}, {}, {})
+    PickPhotoScreen(uiState = PickPhotoState(), {},{}, {}, {}, {}, {}, {})
 }

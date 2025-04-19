@@ -20,7 +20,8 @@ internal data class PickPhotoState(
     val folderSelected: PhotoFolderModel = PhotoFolderModel(),
     val itemSelected: PhotoModel = PhotoModel(path = DIContainer.pathImageSample , name = "Sample Image"),
     val pathImageSample: String = DIContainer.pathImageSample,
-    val isShowListFolder: Boolean = false
+    val isShowListFolder: Boolean = false,
+    val isFullPhotoPermissionGranted : Boolean = false
 ) : Parcelable
 
 const val NAME_ALL_PHOTOS = "All Photos"

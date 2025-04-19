@@ -10,5 +10,6 @@ internal sealed class PickPhotoIntent {
     data class LoadFolders(val context: Context) : PickPhotoIntent()
     data class SelectPhoto(val itemSelected: PhotoModel) : PickPhotoIntent()
     data class SelectFolder(val folderSelected: PhotoFolderModel) : PickPhotoIntent()
-    object ChangeShowListFolder : PickPhotoIntent()
+    data class setPhotoPermissionFullGranted(val isGranted: Boolean) : PickPhotoIntent()
+    data object ChangeShowListFolder : PickPhotoIntent()
 }
