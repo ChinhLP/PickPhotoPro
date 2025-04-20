@@ -23,8 +23,7 @@ internal class ViewModelFactory : AbstractSavedStateViewModelFactory() {
 
             modelClass.isAssignableFrom(PickPhotoViewModel::class.java) -> {
                 PickPhotoViewModel(
-                    DIContainer.repositoryContainer.galleryRepository,
-                    handle
+                    DIContainer.repositoryContainer.galleryRepository
                 ) as T
             }
 

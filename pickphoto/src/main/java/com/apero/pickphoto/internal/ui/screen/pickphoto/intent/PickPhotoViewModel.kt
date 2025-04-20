@@ -2,31 +2,26 @@ package com.apero.pickphoto.internal.ui.screen.pickphoto.intent
 
 import android.content.Context
 import android.util.Log
-import androidx.annotation.DrawableRes
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.apero.pickphoto.R
 import com.apero.pickphoto.internal.data.model.PhotoFolderModel
 import com.apero.pickphoto.internal.data.model.PhotoModel
 import com.apero.pickphoto.internal.data.repo.GalleryRepository
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 internal class PickPhotoViewModel(
-    private val galleryRepository: GalleryRepository,
-    private val savedStateHandle: SavedStateHandle
+    private val galleryRepository: GalleryRepository
 ) : ViewModel() {
-    companion object {
-        private const val UI_STATE_KEY = "photo_ui_state"
-    }
 
-    val uiState: StateFlow<PickPhotoState> =
-        savedStateHandle.getStateFlow(UI_STATE_KEY, PickPhotoState())
+    private val _uiState = MutableStateFlow(PickPhotoState())
+    val uiState: StateFlow<PickPhotoState> = _uiState.asStateFlow()
 
     private fun updateUiState(update: PickPhotoState.() -> PickPhotoState) {
         val newState = uiState.value.update()
-        savedStateHandle[UI_STATE_KEY] = newState
+        _uiState.value = newState
     }
 
     fun onEvent(intent: PickPhotoIntent) {
@@ -48,7 +43,7 @@ internal class PickPhotoViewModel(
                 selectFolder(intent.folderSelected)
             }
 
-            is PickPhotoIntent.setPhotoPermissionFullGranted -> setPhotoPermissionFullGranted(intent.isGranted)
+            is PickPhotoIntent.SetPhotoPermissionFullGranted -> setPhotoPermissionFullGranted(intent.isGranted)
         }
     }
 

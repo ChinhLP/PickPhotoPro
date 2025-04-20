@@ -5,7 +5,8 @@
     <string name="vsl_pick_photo_label_demo">Demo</string>
     <string name="vsl_pick_photo_label_add_photo">Add photo</string>
     <string name="vsl_pick_photo_title_dialog_permission">Request Permission</string>
-    <string name="vsl_pick_photo_content_dialog_permission">The app requires access to photos to continue. Please grant the permission in settings.</string>
+    <string name="vsl_pick_photo_content_dialog_permission_photo">The app requires access to photos to continue. Please grant the permission in settings.</string>
+    <string name="vsl_pick_photo_content_dialog_permission_camera">The app requires access to camera to continue. Please grant the permission in settings.</string>
     <string name="vsl_pick_photo_confirm_dialog_permission">Open setting permission</string>
     <string name="vsl_pick_photo_dismiss_dialog_permission">Cancel</string>
 

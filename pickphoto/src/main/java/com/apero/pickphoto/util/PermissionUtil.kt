@@ -5,7 +5,6 @@ import android.app.Activity
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.result.ActivityResultLauncher
-import androidx.core.app.ActivityCompat
 import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
 import androidx.core.content.ContextCompat
 import com.apero.pickphoto.internal.data.pref.SharedPref
@@ -36,6 +35,10 @@ internal class PermissionUtil(val pref: SharedPref) {
         }
     }
 
+    private fun getCameraPermission(): String {
+        return Manifest.permission.CAMERA
+    }
+
     fun checkPermissionsPhoto(weakActivity: WeakReference<Activity>): Boolean {
         val activity = weakActivity.get() ?: return false
         val permissions = getRequiredPermissions()
@@ -55,7 +58,7 @@ internal class PermissionUtil(val pref: SharedPref) {
     fun requestPermissionsPhoto(
         weakActivity: WeakReference<Activity>,
         requestPermissionLauncher: ActivityResultLauncher<Array<String>>,
-        onCancelRequest: () -> Unit = {}
+        onShowCustomDialog: (String) -> Unit = {}
     ) {
         val activity = weakActivity.get() ?: return
         val permissions = getRequiredPermissions()
@@ -71,25 +74,46 @@ internal class PermissionUtil(val pref: SharedPref) {
                 pref.isFirstRequestPermissionGallery = false
                 requestPermissionLauncher.launch(permissions)
             } else {
-                onCancelRequest.invoke()
+                onShowCustomDialog.invoke(TYPE_PERMISSION_GALLERY)
             }
         }
     }
 
-    fun hasFullPhotoPermission(weakActivity: WeakReference<Activity>): Boolean {
-        val activity = weakActivity.get() ?: return false
 
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(
-                activity,
-                Manifest.permission.READ_MEDIA_IMAGES
-            ) == PackageManager.PERMISSION_GRANTED
-        } else {
-            // Android 6 - 12
-            ContextCompat.checkSelfPermission(
-                activity,
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
+    fun checkCameraPermission(weakActivity: WeakReference<Activity>): Boolean {
+        val activity = weakActivity.get() ?: return false
+        val permission = getCameraPermission()
+        
+        return ContextCompat.checkSelfPermission(
+            activity,
+            permission
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    fun requestCameraPermission(
+        weakActivity: WeakReference<Activity>,
+        requestPermissionLauncher: ActivityResultLauncher<String>,
+        onShowCustomDialog: (String) -> Unit = {}
+    ) {
+        val activity = weakActivity.get() ?: return
+        val permission = getCameraPermission()
+
+        if (checkCameraPermission(weakActivity).not()) {
+            if (pref.isFirstRequestPermissionCamera || shouldShowRequestPermissionRationale(
+                    activity,
+                    permission
+                )
+            ) {
+                pref.isFirstRequestPermissionCamera = false
+                requestPermissionLauncher.launch(permission)
+            } else {
+                onShowCustomDialog.invoke(TYPE_PERMISSION_CAMERA)
+            }
         }
+    }
+
+    companion object {
+        const val TYPE_PERMISSION_GALLERY = "TYPE_PERMISSION_GALLERY"
+        const val TYPE_PERMISSION_CAMERA = "TYPE_PERMISSION_CAMERA"
     }
 }

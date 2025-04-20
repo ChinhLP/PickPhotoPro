@@ -82,7 +82,6 @@ internal class CameraActivity : BaseComposeActivity() {
             ImagePreviewScreen(
                 imageUri = uiState.uriImage!!,
                 onAccept = {
-                    Log.d("dkm", "SetupUi: ${uiState.uriImage!!.path}")
                     DIContainer.vslPickPhotoActionConfig.actionAfterApprove(
                         uiState.uriImage!!.path,
                         WeakReference(this)

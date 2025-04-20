@@ -17,55 +17,59 @@ import com.apero.pickphoto.internal.designsystem.pxToDp
 
 @Composable
 fun PickPhotoDialogPermission(
+    shouldShowDialog: Boolean,
     @StringRes stringResourceContent: Int,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = Color.White,
-        modifier = Modifier.clip(RoundedCornerShape(16)),
-        title = {
-            Text(
-                text = stringResource(R.string.vsl_pick_photo_title_dialog_permission),
-                style = MaterialTheme.typography.titleMedium
-            )
-        },
-        text = {
-            Text(
-                text = stringResource(stringResourceContent),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onConfirm,
-            ) {
+    if (shouldShowDialog) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            containerColor = Color.White,
+            modifier = Modifier.clip(RoundedCornerShape(16)),
+            title = {
                 Text(
-                    text = stringResource(R.string.vsl_pick_photo_confirm_dialog_permission),
-                    color = Color(0xFF0D99FF)
+                    text = stringResource(R.string.vsl_pick_photo_title_dialog_permission),
+                    style = MaterialTheme.typography.titleMedium
                 )
-            }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-            ) {
+            },
+            text = {
                 Text(
-                    text = stringResource(R.string.vsl_pick_photo_dismiss_dialog_permission),
-                    color = Color(0xFF0D99FF)
+                    text = stringResource(stringResourceContent),
+                    style = MaterialTheme.typography.bodyMedium
                 )
-            }
-        },
-        shape = RoundedCornerShape(16.pxToDp())
-    )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = onConfirm,
+                ) {
+                    Text(
+                        text = stringResource(R.string.vsl_pick_photo_confirm_dialog_permission),
+                        color = Color(0xFF0D99FF)
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = onDismiss,
+                ) {
+                    Text(
+                        text = stringResource(R.string.vsl_pick_photo_dismiss_dialog_permission),
+                        color = Color(0xFF0D99FF)
+                    )
+                }
+            },
+            shape = RoundedCornerShape(16.pxToDp())
+        )
+    }
 }
 
 @Preview
 @Composable
 fun PickPhotoDialogPermissionPreview() {
     PickPhotoDialogPermission(
-        R.string.vsl_pick_photo_content_dialog_permission,
+        true,
+        R.string.vsl_pick_photo_content_dialog_permission_photo,
         onDismiss = {},
         onConfirm = {})
 }

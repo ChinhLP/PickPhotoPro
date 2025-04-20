@@ -4,7 +4,9 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -27,11 +29,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.NonRestartableComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -58,6 +60,9 @@ import com.apero.pickphoto.internal.ui.screen.pickphoto.widget.PickPhotoItem
 import com.apero.pickphoto.internal.ui.screen.pickphoto.widget.PickPhotoItemOption
 import com.apero.pickphoto.internal.ui.widgets.PickPhotoImage
 import com.apero.pickphoto.util.PermissionUtil
+import com.apero.pickphoto.util.PermissionUtil.Companion.TYPE_PERMISSION_CAMERA
+import com.apero.pickphoto.util.PermissionUtil.Companion.TYPE_PERMISSION_GALLERY
+import kotlinx.coroutines.flow.StateFlow
 
 import java.lang.ref.WeakReference
 
@@ -71,14 +76,20 @@ internal class PickPhotoActivity : BaseComposeActivity() {
         PermissionUtil(DIContainer.repositoryContainer.sharedPref)
     }
 
-    private val requestPermissionsLauncher =
+    private val requestPermissionsPhotoLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-            permissions.entries.forEach { entry ->
-                if (entry.value) {
-                    viewModel.onEvent(PickPhotoIntent.setPhotoPermissionFullGranted(true))
-                    viewModel.onEvent(PickPhotoIntent.LoadInitPhotos(this@PickPhotoActivity))
-                    viewModel.onEvent(PickPhotoIntent.LoadFolders(this@PickPhotoActivity))
-                }
+            if (permissionUtil.checkPermissionsPhoto(WeakReference(this@PickPhotoActivity))) {
+                viewModel.onEvent(PickPhotoIntent.SetPhotoPermissionFullGranted(true))
+                viewModel.onEvent(PickPhotoIntent.LoadInitPhotos(this@PickPhotoActivity))
+                viewModel.onEvent(PickPhotoIntent.LoadFolders(this@PickPhotoActivity))
+            }
+        }
+
+    private val requestPermissionCameraLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (isGranted) {
+                val intent = Intent(this, CameraActivity::class.java)
+                startActivity(intent)
             }
         }
 
@@ -97,81 +108,123 @@ internal class PickPhotoActivity : BaseComposeActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        viewModel.onEvent(PickPhotoIntent.LoadInitPhotos(this@PickPhotoActivity))
-        viewModel.onEvent(PickPhotoIntent.LoadFolders(this@PickPhotoActivity))
         if (permissionUtil.checkPermissionsPhoto(WeakReference(this))) {
-            viewModel.onEvent(PickPhotoIntent.setPhotoPermissionFullGranted(true))
+            viewModel.onEvent(PickPhotoIntent.LoadInitPhotos(this@PickPhotoActivity))
+            viewModel.onEvent(PickPhotoIntent.LoadFolders(this@PickPhotoActivity))
+            viewModel.onEvent(PickPhotoIntent.SetPhotoPermissionFullGranted(true))
         } else {
-            permissionUtil.requestPermissionsPhoto(WeakReference(this), requestPermissionsLauncher)
+            permissionUtil.requestPermissionsPhoto(
+                WeakReference(this),
+                requestPermissionsPhotoLauncher
+            )
         }
     }
 
     @Composable
     override fun SetupUi() {
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-        var shouldShowDialogCustomPermission by remember { mutableStateOf(false) }
-        var showDialog by remember { mutableStateOf(true) }
+        val showDialogCustomPermission = remember { mutableStateOf(false) }
+        val typePermissionsRequest = remember { mutableStateOf("") }
+        val activityResultLauncher = rememberSettingsPermissionLauncher(typePermissionsRequest)
 
-        val activityResultLauncher = rememberLauncherForActivityResult(
+
+
+        PickPhotoDialogPermission(
+            shouldShowDialog = showDialogCustomPermission.value,
+            stringResourceContent = when (typePermissionsRequest.value) {
+                TYPE_PERMISSION_GALLERY -> R.string.vsl_pick_photo_content_dialog_permission_photo
+                TYPE_PERMISSION_CAMERA -> R.string.vsl_pick_photo_content_dialog_permission_camera
+                else -> R.string.vsl_pick_photo_content_dialog_permission_photo
+            },
+            onConfirm = {
+                showDialogCustomPermission.value = false
+                openAppSettings(activityResultLauncher)
+            },
+            onDismiss = {
+                showDialogCustomPermission.value = false
+            }
+        )
+
+        PickPhotoScreen(
+            uiState = uiState,
+            onRequestPermission = {
+                handlePhotoPermissionRequest(
+                    typePermissionsRequest,
+                    showDialogCustomPermission
+                )
+            },
+            onOpenCamera = {
+                handleCameraAction(
+                    typePermissionsRequest,
+                    showDialogCustomPermission
+                )
+            },
+            onNext = { handleNextAction(it, uiState) },
+            onBackPressed = { onBack() },
+            onPhotoSelected = { viewModel.onEvent(PickPhotoIntent.SelectPhoto(it)) },
+            onFolderSelected = { viewModel.onEvent(PickPhotoIntent.SelectFolder(it)) },
+            onClickShowListFolder = { viewModel.onEvent(PickPhotoIntent.ChangeShowListFolder) }
+        )
+    }
+
+    @Composable
+    private fun rememberSettingsPermissionLauncher(typePermissionsRequest: MutableState<String>) =
+        rememberLauncherForActivityResult(
             contract = ActivityResultContracts.StartActivityForResult()
         ) {
-            if (permissionUtil.checkPermissionsPhoto(WeakReference(this@PickPhotoActivity))) {
-                viewModel.onEvent(PickPhotoIntent.setPhotoPermissionFullGranted(true))
+            if (typePermissionsRequest.value == TYPE_PERMISSION_GALLERY && permissionUtil.checkPermissionsPhoto(
+                    WeakReference(this@PickPhotoActivity)
+                )
+            ) {
+                viewModel.onEvent(PickPhotoIntent.SetPhotoPermissionFullGranted(true))
                 viewModel.onEvent(PickPhotoIntent.LoadInitPhotos(this@PickPhotoActivity))
                 viewModel.onEvent(PickPhotoIntent.LoadFolders(this@PickPhotoActivity))
             }
         }
 
-        if (shouldShowDialogCustomPermission) {
-            PickPhotoDialogPermission(
-                stringResourceContent = R.string.vsl_pick_photo_content_dialog_permission,
-                onConfirm = {
-                    showDialog = false
-                    shouldShowDialogCustomPermission = false
-                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                        data = Uri.fromParts("package", this@PickPhotoActivity.packageName, null)
-                    }
-                    activityResultLauncher.launch(intent)
-                },
-                onDismiss = {
-                    showDialog = false
-                    shouldShowDialogCustomPermission = false
-                }
-            )
-        }
 
-        PickPhotoScreen(
-            uiState = uiState,
-            onRequestPermission = {
-                permissionUtil.requestPermissionsPhoto(
-                    WeakReference(this),
-                    requestPermissionsLauncher
-                ) {
-                    shouldShowDialogCustomPermission = true
-                }
-            },
-            onOpenCamera = {
-                val intent = Intent(this, CameraActivity::class.java)
-                startActivity(intent)
-            },
-            onNext = {
-                DIContainer.vslPickPhotoActionConfig.actionAfterApprove(
-                    if (it == uiState.pathImageSample) it else "content://media/" + it,
-                    WeakReference(this)
-                )
-            },
-            onBackPressed = {
-                onBack()
-            },
-            onPhotoSelected = {
-                viewModel.onEvent(PickPhotoIntent.SelectPhoto(it))
-            },
-            onFolderSelected = {
-                viewModel.onEvent(PickPhotoIntent.SelectFolder(it))
-            },
-            onClickShowListFolder = {
-                viewModel.onEvent(PickPhotoIntent.ChangeShowListFolder)
+    private fun openAppSettings(launcher: ActivityResultLauncher<Intent>) {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", this@PickPhotoActivity.packageName, null)
+        }
+        launcher.launch(intent)
+    }
+
+    private fun handlePhotoPermissionRequest(
+        setPermissionType: MutableState<String>,
+        shouldShowDialogCustomPermission: MutableState<Boolean>
+    ) {
+        permissionUtil.requestPermissionsPhoto(
+            WeakReference(this),
+            requestPermissionsPhotoLauncher
+        ) { type ->
+            setPermissionType.value = type
+            shouldShowDialogCustomPermission.value = true
+        }
+    }
+
+    private fun handleCameraAction(
+        setPermissionType: MutableState<String>,
+        shouldShowDialogCustomPermission: MutableState<Boolean>
+    ) {
+        if (permissionUtil.checkCameraPermission(WeakReference(this)).not()) {
+            permissionUtil.requestCameraPermission(
+                WeakReference(this),
+                requestPermissionCameraLauncher,
+            ) { type ->
+                setPermissionType.value = type
+                shouldShowDialogCustomPermission.value = true
             }
+        } else {
+            val intent = Intent(this, CameraActivity::class.java)
+            startActivity(intent)
+        }
+    }
+
+    private fun handleNextAction(path: String?, uiState: PickPhotoState) {
+        DIContainer.vslPickPhotoActionConfig.actionAfterApprove(
+            if (path == uiState.pathImageSample) path else "content://media/" + path,
+            WeakReference(this)
         )
     }
 }
@@ -371,5 +424,5 @@ fun FolderPickPhoto(
 @Preview
 @Composable
 internal fun PreviewPickPhotoScreen() {
-    PickPhotoScreen(uiState = PickPhotoState(), {},{}, {}, {}, {}, {}, {})
+    PickPhotoScreen(uiState = PickPhotoState(), {}, {}, {}, {}, {}, {}, {})
 }
