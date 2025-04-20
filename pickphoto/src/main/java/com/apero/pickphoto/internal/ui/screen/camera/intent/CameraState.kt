@@ -1,4 +1,10 @@
 package com.apero.pickphoto.internal.ui.screen.camera.intent
 
-class CameraState {
-}
+import android.net.Uri
+import android.os.Parcelable
+import kotlinx.android.parcel.Parcelize
+
+@Parcelize
+data class CameraState(
+    val uriImage: Uri? = null
+) : Parcelable

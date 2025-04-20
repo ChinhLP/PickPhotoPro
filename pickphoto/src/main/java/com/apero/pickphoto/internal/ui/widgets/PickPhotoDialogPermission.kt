@@ -1,5 +1,6 @@
-package com.apero.pickphoto.internal.ui.screen.pickphoto.widget
+package com.apero.pickphoto.internal.ui.widgets
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -16,6 +17,7 @@ import com.apero.pickphoto.internal.designsystem.pxToDp
 
 @Composable
 fun PickPhotoDialogPermission(
+    @StringRes stringResourceContent: Int,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
@@ -31,7 +33,7 @@ fun PickPhotoDialogPermission(
         },
         text = {
             Text(
-                text = stringResource(R.string.vsl_pick_photo_content_dialog_permission),
+                text = stringResource(stringResourceContent),
                 style = MaterialTheme.typography.bodyMedium
             )
         },
@@ -62,5 +64,8 @@ fun PickPhotoDialogPermission(
 @Preview
 @Composable
 fun PickPhotoDialogPermissionPreview() {
-    PickPhotoDialogPermission(onDismiss = {}, onConfirm = {})
+    PickPhotoDialogPermission(
+        R.string.vsl_pick_photo_content_dialog_permission,
+        onDismiss = {},
+        onConfirm = {})
 }

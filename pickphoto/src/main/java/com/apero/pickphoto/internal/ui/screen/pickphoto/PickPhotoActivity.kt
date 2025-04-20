@@ -1,23 +1,15 @@
 package com.apero.pickphoto.internal.ui.screen.pickphoto
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.provider.Settings
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -33,10 +25,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.NonRestartableComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,12 +35,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.apero.pickphoto.R
 import com.apero.pickphoto.di.DIContainer
@@ -65,7 +53,7 @@ import com.apero.pickphoto.internal.ui.screen.pickphoto.intent.NAME_ALL_PHOTOS
 import com.apero.pickphoto.internal.ui.screen.pickphoto.intent.PickPhotoIntent
 import com.apero.pickphoto.internal.ui.screen.pickphoto.intent.PickPhotoState
 import com.apero.pickphoto.internal.ui.screen.pickphoto.intent.PickPhotoViewModel
-import com.apero.pickphoto.internal.ui.screen.pickphoto.widget.PickPhotoDialogPermission
+import com.apero.pickphoto.internal.ui.widgets.PickPhotoDialogPermission
 import com.apero.pickphoto.internal.ui.screen.pickphoto.widget.PickPhotoItem
 import com.apero.pickphoto.internal.ui.screen.pickphoto.widget.PickPhotoItemOption
 import com.apero.pickphoto.internal.ui.widgets.PickPhotoImage
@@ -112,6 +100,8 @@ internal class PickPhotoActivity : BaseComposeActivity() {
         viewModel.onEvent(PickPhotoIntent.LoadInitPhotos(this@PickPhotoActivity))
         viewModel.onEvent(PickPhotoIntent.LoadFolders(this@PickPhotoActivity))
         if (permissionUtil.checkPermissionsPhoto(WeakReference(this))) {
+            viewModel.onEvent(PickPhotoIntent.setPhotoPermissionFullGranted(true))
+        } else {
             permissionUtil.requestPermissionsPhoto(WeakReference(this), requestPermissionsLauncher)
         }
     }
@@ -134,6 +124,7 @@ internal class PickPhotoActivity : BaseComposeActivity() {
 
         if (shouldShowDialogCustomPermission) {
             PickPhotoDialogPermission(
+                stringResourceContent = R.string.vsl_pick_photo_content_dialog_permission,
                 onConfirm = {
                     showDialog = false
                     shouldShowDialogCustomPermission = false

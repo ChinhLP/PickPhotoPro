@@ -18,7 +18,7 @@ internal class ViewModelFactory : AbstractSavedStateViewModelFactory() {
     ): T {
         return when {
             modelClass.isAssignableFrom(CameraViewModel::class.java) -> {
-                CameraViewModel() as T
+                CameraViewModel(handle) as T
             }
 
             modelClass.isAssignableFrom(PickPhotoViewModel::class.java) -> {
